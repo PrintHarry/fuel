@@ -1,5 +1,5 @@
-// Offline support. Bump VERSION whenever app files change so phones pick up the update.
-const VERSION = 'fuel-v4';
+// Offline support. Bump VERSION (and APP_VERSION in js/app.js) whenever app files change.
+const VERSION = 'fuel-v5';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/db.js', 'js/calc.js', 'js/food.js', 'js/charts.js', 'js/scan.js', 'js/ui.js',
@@ -8,7 +8,9 @@ const SHELL = [
 const RUNTIME = 'fuel-runtime'; // fonts and the barcode library
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the browser's HTTP cache, so an update never stores stale copies of the files.
+  const fresh = SHELL.map(url => new Request(url, { cache: 'reload' }));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(fresh)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {

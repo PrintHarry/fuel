@@ -5,6 +5,7 @@ import { weightChart, intakeChart } from './charts.js';
 import { startScan } from './scan.js';
 import { esc, fmt, fmt1, icon, toast, dayLabel, nowTime, isStandalone, isIos } from './ui.js';
 
+const APP_VERSION = 5; // keep in step with VERSION in sw.js
 const $app = document.getElementById('app');
 const today = () => C.iso();
 
@@ -703,6 +704,7 @@ async function viewSettings() {
 
     <div class="label">About</div>
     <p class="prose small">Generic foods: McCance and Widdowson's Composition of Foods Integrated Dataset (CoFID) 2021, Public Health England, Open Government Licence v3.0. Branded products: Open Food Facts, Open Database Licence. Trend weight from The Hacker's Diet (John Walker).</p>
+    <p class="small faint">Fuel version ${APP_VERSION}</p>
     <button class="btn btn-danger btn-sm" data-act="reset" style="margin-top:8px">Delete all data</button>
   </main>${tabbar('settings')}`;
   const total = document.getElementById('s-mtotal');
@@ -978,5 +980,16 @@ $app.addEventListener('click', e => {
     lastSeen = today();
     if (S.view === 'today') { S.date = today(); render(); }
   });
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator) {
+    // When an update takes over, reload once so the new files are used straight away.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController && !reloading) { reloading = true; location.reload(); }
+    });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+      // iPhone apps often resume rather than restart, so check for updates whenever Fuel comes back.
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+    }).catch(() => {});
+  }
 })();
