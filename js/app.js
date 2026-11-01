@@ -5,7 +5,7 @@ import { weightChart, intakeChart } from './charts.js';
 import { startScan } from './scan.js';
 import { esc, fmt, fmt1, icon, toast, dayLabel, nowTime, isStandalone, isIos } from './ui.js';
 
-const APP_VERSION = 5; // keep in step with VERSION in sw.js
+const APP_VERSION = 6; // keep in step with VERSION in sw.js
 const $app = document.getElementById('app');
 const today = () => C.iso();
 

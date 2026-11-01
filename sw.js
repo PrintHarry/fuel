@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION (and APP_VERSION in js/app.js) whenever app files change.
-const VERSION = 'fuel-v5';
+const VERSION = 'fuel-v6';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/db.js', 'js/calc.js', 'js/food.js', 'js/charts.js', 'js/scan.js', 'js/ui.js',
