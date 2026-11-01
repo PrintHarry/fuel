@@ -76,6 +76,23 @@ export const db = {
   },
 };
 
+// Add foods from a file without touching anything else. File: { app: 'fuel', foods: [...] }.
+// Foods marked favourite: true are pinned to favourites. Returns the number added.
+export async function mergeFoods(data) {
+  if (!data || data.app !== 'fuel' || !Array.isArray(data.foods)) throw new Error('This file has no Fuel foods in it.');
+  const foods = data.foods.map(f => sanitise(f)).filter(f => f && f.id && f.name && f.kcal >= 0);
+  const favs = await db.meta('favs', []);
+  for (const f of foods) {
+    const fav = f.favourite === true;
+    delete f.favourite;
+    const food = { ...f, source: 'mine', per: f.per === '100g' ? '100g' : 'serving' };
+    await db.put('foods', food);
+    if (fav && !favs.some(x => x.id === food.id)) favs.push(food);
+  }
+  await db.setMeta('favs', favs);
+  return foods.length;
+}
+
 // Ask the browser not to evict our data. Installed home-screen apps usually get this.
 export async function requestPersistence() {
   try {

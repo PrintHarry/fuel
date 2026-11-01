@@ -1,11 +1,11 @@
-import { db, uid, requestPersistence } from './db.js';
+import { db, uid, requestPersistence, mergeFoods } from './db.js';
 import * as C from './calc.js';
 import { loadCofid, searchFoods, lookupBarcode, searchOnline, STAPLES } from './food.js';
 import { weightChart, intakeChart } from './charts.js';
 import { startScan } from './scan.js';
 import { esc, fmt, fmt1, icon, toast, dayLabel, nowTime, isStandalone, isIos } from './ui.js';
 
-const APP_VERSION = 6; // keep in step with VERSION in sw.js
+const APP_VERSION = 7; // keep in step with VERSION in sw.js
 const $app = document.getElementById('app');
 const today = () => C.iso();
 
@@ -269,7 +269,7 @@ async function viewAdd() {
 }
 
 function foodRow(f) {
-  const badge = f.source === 'off' || f.source === 'staple' ? '<span class="badge off">Product</span>' : f.source === 'mine' ? `<span class="badge mine">${f.per === 'serving' ? 'Recipe' : 'Mine'}</span>` : '';
+  const badge = f.source === 'off' || f.source === 'staple' ? '<span class="badge off">Product</span>' : f.source === 'mine' ? `<span class="badge mine">${f.recipe ? 'Recipe' : 'Mine'}</span>` : '';
   const per = f.per === 'serving' ? 'per serving' : 'per 100 g';
   return `<button class="item" data-act="open-food" data-id="${esc(f.id)}">
     <span class="main"><span class="title">${esc(f.name)}</span><span class="meta">${badge}${esc(f.brand ? f.brand + ' · ' : '')}${fmt1(f.protein)}g protein ${per}</span></span>
@@ -700,7 +700,9 @@ async function viewSettings() {
     <div class="label">Your data</div>
     <p class="prose small">Everything is stored on this phone only${persisted ? ', protected from automatic clean-up' : ''}. Export a backup now and then, and save it to Files or iCloud Drive.</p>
     <div class="row-actions"><button class="btn" data-act="export">${icon.share} Export backup</button>
-      <label class="btn">Restore backup<input type="file" id="import" accept="application/json,.json" hidden></label></div>
+      <label class="btn">Restore backup<input type="file" id="import" accept="application/json,.json" hidden></label>
+      <label class="btn">Add foods from file<input type="file" id="import-foods" accept="application/json,.json" hidden></label></div>
+    <p class="small faint" style="margin-top:8px">Restore replaces everything with the backup. Add foods only adds to My foods and keeps your log.</p>
 
     <div class="label">About</div>
     <p class="prose small">Generic foods: McCance and Widdowson's Composition of Foods Integrated Dataset (CoFID) 2021, Public Health England, Open Government Licence v3.0. Branded products: Open Food Facts, Open Database Licence. Trend weight from The Hacker's Diet (John Walker).</p>
@@ -726,6 +728,17 @@ async function viewSettings() {
       await refreshMyFoods();
       toast('Backup restored');
       go('today', { root: true });
+    } catch (err) { toast(err.message || "That file couldn't be read."); }
+  });
+  document.getElementById('import-foods').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const n = await mergeFoods(JSON.parse(await file.text()));
+      await refreshMyFoods();
+      toast(`Added ${n} food${n === 1 ? '' : 's'} to My foods`);
+      S.addTab = 'mine';
+      go('add', { root: true });
     } catch (err) { toast(err.message || "That file couldn't be read."); }
   });
 }
