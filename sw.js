@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION whenever app files change so phones pick up the update.
-const VERSION = 'fuel-v3';
+const VERSION = 'fuel-v4';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/db.js', 'js/calc.js', 'js/food.js', 'js/charts.js', 'js/scan.js', 'js/ui.js',

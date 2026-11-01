@@ -1,6 +1,6 @@
 import { db, uid, requestPersistence } from './db.js';
 import * as C from './calc.js';
-import { loadCofid, searchFoods, lookupBarcode, searchOnline } from './food.js';
+import { loadCofid, searchFoods, lookupBarcode, searchOnline, STAPLES } from './food.js';
 import { weightChart, intakeChart } from './charts.js';
 import { startScan } from './scan.js';
 import { esc, fmt, fmt1, icon, toast, dayLabel, nowTime, isStandalone, isIos } from './ui.js';
@@ -268,7 +268,7 @@ async function viewAdd() {
 }
 
 function foodRow(f) {
-  const badge = f.source === 'off' ? '<span class="badge off">Product</span>' : f.source === 'mine' ? `<span class="badge mine">${f.per === 'serving' ? 'Recipe' : 'Mine'}</span>` : '';
+  const badge = f.source === 'off' || f.source === 'staple' ? '<span class="badge off">Product</span>' : f.source === 'mine' ? `<span class="badge mine">${f.per === 'serving' ? 'Recipe' : 'Mine'}</span>` : '';
   const per = f.per === 'serving' ? 'per serving' : 'per 100 g';
   return `<button class="item" data-act="open-food" data-id="${esc(f.id)}">
     <span class="main"><span class="title">${esc(f.name)}</span><span class="meta">${badge}${esc(f.brand ? f.brand + ' · ' : '')}${fmt1(f.protein)}g protein ${per}</span></span>
@@ -377,7 +377,7 @@ async function viewFood() {
     ${topbar(editing ? 'Edit entry' : picking ? 'Add ingredient' : 'Add food', '', `${f.source === 'mine' && !editing && !picking ? `<button class="btn btn-quiet btn-sm" data-act="edit-food">Edit</button>` : ''}<button class="icon-btn" data-act="fav" aria-label="${fav ? 'Remove favourite' : 'Favourite'}" style="color:${fav ? 'var(--green)' : ''}">${fav ? icon.starFill : icon.star}</button>`)}
     <div class="food-head">
       <h2>${esc(f.name)}</h2>
-      <div class="muted">${[f.brand, f.source === 'cofid' ? 'UK food tables (CoFID)' : f.source === 'off' ? 'Open Food Facts' : 'Your food', per ? `${fmt(f.kcal)} kcal per serving` : `${fmt(f.kcal)} kcal per 100 g`].filter(Boolean).map(esc).join(' · ')}</div>
+      <div class="muted">${[f.brand, f.source === 'cofid' ? 'UK food tables (CoFID)' : f.source === 'off' ? 'Open Food Facts' : f.source === 'staple' ? f.label : 'Your food', per ? `${fmt(f.kcal)} kcal per serving` : `${fmt(f.kcal)} kcal per 100 g`].filter(Boolean).map(esc).join(' · ')}</div>
     </div>
     <div class="amount">
       <label class="field" style="margin:0"><span>${per ? 'Servings' : 'Amount'}</span>
@@ -960,6 +960,14 @@ $app.addEventListener('click', e => {
 (async function boot() {
   S.settings = (await db.meta('settings')) || { ...DEFAULTS };
   [cofid] = await Promise.all([loadCofid(), refreshMyFoods()]);
+  // Pin each built-in staple to favourites once (removing it later is respected).
+  const pinned = await db.meta('staplesPinned', []);
+  const fresh = STAPLES.filter(f => !pinned.includes(f.id));
+  if (fresh.length) {
+    const favs = await db.meta('favs', []);
+    await db.setMeta('favs', [...fresh.map(snapshot), ...favs.filter(f => !fresh.some(s => s.id === f.id))]);
+    await db.setMeta('staplesPinned', [...pinned, ...fresh.map(f => f.id)]);
+  }
   if (!S.settings.onboarded) { S.view = 'onboard'; }
   else requestPersistence();
   render();

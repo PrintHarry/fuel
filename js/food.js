@@ -4,6 +4,15 @@ const OFF_SEARCH = 'https://search.openfoodfacts.org/search';
 const OFF_LEGACY = 'https://world.openfoodfacts.org/cgi/search.pl';
 const OFF_FIELDS = 'code,product_name,brands,nutriments,serving_quantity,quantity';
 
+// Products Harry eats often, built in so they work offline and rank first. Values per 100 g from the pack label.
+export const STAPLES = [
+  {
+    id: 's-danone-skyr-natural', source: 'staple', name: 'Skyr High Protein 0% Fat Natural Yogurt', brand: 'Danone',
+    per: '100g', kcal: 51, protein: 9.0, carbs: 3.4, fat: 0.1, servingG: null,
+    keywords: 'skyr yoghurt yogurt natural plain greek style', label: 'Waitrose label, Nov 2026',
+  },
+];
+
 let cofid = null;
 export async function loadCofid() {
   if (cofid) return cofid;
@@ -14,6 +23,8 @@ export async function loadCofid() {
     kcal: r[1], protein: r[2] ?? 0, carbs: r[3] ?? 0, fat: r[4] ?? 0, fibre: r[5],
     _search: normalise(r[0]),
   }));
+  for (const s of STAPLES) s._search = normalise(`${s.name} ${s.brand} ${s.keywords}`);
+  cofid = [...STAPLES, ...cofid];
   return cofid;
 }
 
@@ -40,7 +51,7 @@ export function searchFoods(list, query, limit = 40) {
     score += hay.length / 12;
     if (/\b(raw|average|boiled|plain|semi skimmed)\b/.test(hay)) score -= 2;
     if (/\bweighed with\b/.test(hay)) score += 6;
-    if (f.source !== 'cofid') score -= 4; // your own foods first
+    if (f.source !== 'cofid') score -= 4; // your own foods and staples first
     out.push([score, f]);
   }
   return out.sort((a, b) => a[0] - b[0]).slice(0, limit).map(x => x[1]);
