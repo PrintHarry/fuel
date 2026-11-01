@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fuel · Calorie tracking that learns your burn</title>
+  <meta name="description" content="Free calorie, protein and weight-trend tracker for iPhone. Learns what you actually burn from your own weigh-ins. No ads, no account, works offline.">
+  <meta name="theme-color" content="#0d0f0b">
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" href="../icons/icon-192.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    /* Same identity as the app: NVIDIA-style data, Meta-style interaction. */
+    :root {
+      color-scheme: dark;
+      --bg: oklch(0.155 0.006 135);
+      --bg-raised: oklch(0.19 0.007 135);
+      --surface: oklch(0.215 0.008 135);
+      --surface-2: oklch(0.255 0.009 135);
+      --line: oklch(0.29 0.008 135);
+      --line-strong: oklch(0.36 0.01 135);
+      --text: oklch(0.965 0.004 135);
+      --muted: oklch(0.74 0.01 135);
+      --faint: oklch(0.58 0.01 135);
+      --green: oklch(0.76 0.19 131);
+      --green-deep: oklch(0.7 0.18 131);
+      --on-green: oklch(0.17 0.03 131);
+      --on-green-muted: oklch(0.3 0.06 131);
+      --blue: oklch(0.58 0.2 258);
+      --blue-press: oklch(0.52 0.2 258);
+      --blue-text: oklch(0.74 0.14 252);
+      --sand: oklch(0.8 0.1 78);
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --num: 'Barlow Semi Condensed', 'Inter', system-ui, sans-serif;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --gutter: clamp(16px, 4vw, 48px);
+      --max: 1200px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 400 17px/1.6 var(--font); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    a { color: inherit; }
+    img, svg { display: block; }
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter); }
+    .num { font-family: var(--num); font-variant-numeric: tabular-nums; }
+
+    /* ---------- Nav ---------- */
+    nav { position: sticky; top: 0; z-index: 10; background: oklch(0.155 0.006 135 / 0.92); border-bottom: 1px solid var(--line); }
+    nav .wrap { display: flex; align-items: center; gap: 12px; height: 64px; }
+    .brand { display: flex; align-items: center; gap: 10px; font: 700 22px var(--num); letter-spacing: 0.02em; text-decoration: none; }
+    .brand img { width: 30px; height: 30px; border-radius: 8px; }
+    nav .links { margin-left: auto; display: flex; gap: 24px; align-items: center; font-size: 15px; color: var(--muted); }
+    nav .links a { text-decoration: none; }
+    nav .links a:hover { color: var(--text); }
+    @media (max-width: 720px) { nav .links a:not(.btn) { display: none; } }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 24px;
+      border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text);
+      font: 600 16px var(--font); text-decoration: none; white-space: nowrap;
+      transition: background 160ms var(--ease), transform 120ms var(--ease);
+    }
+    .btn:hover { background: var(--surface-2); }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--blue); border-color: transparent; color: oklch(0.99 0.004 258); }
+    .btn-primary:hover { background: var(--blue-press); }
+    .btn-sm { min-height: 40px; padding: 0 18px; font-size: 14px; }
+    .btn svg { width: 18px; height: 18px; }
+
+    /* ---------- Hero ---------- */
+    .hero { padding: clamp(48px, 8vw, 112px) 0 clamp(56px, 8vw, 120px); position: relative; }
+    .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: clamp(32px, 5vw, 72px); align-items: center; }
+    .hero h1 {
+      font: 800 clamp(56px, 9.2vw, 132px)/0.88 var(--num); letter-spacing: -0.015em; margin: 0 0 28px; text-transform: uppercase;
+    }
+    .hero h1 .g { color: var(--green); }
+    .hero .lede { font-size: clamp(18px, 1.6vw, 21px); line-height: 1.55; color: var(--muted); max-width: 36ch; margin: 0 0 36px; }
+    .hero .lede strong { color: var(--text); font-weight: 600; }
+    .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+    .hero .facts { display: flex; gap: clamp(20px, 3vw, 40px); margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+    .hero .facts div { font-size: 14px; color: var(--faint); line-height: 1.3; }
+    .hero .facts b { display: block; font: 700 30px var(--num); color: var(--text); }
+    .reveal { opacity: 0; transform: translateY(14px); animation: rise 700ms var(--ease) forwards; }
+    .reveal.d1 { animation-delay: 80ms; } .reveal.d2 { animation-delay: 180ms; } .reveal.d3 { animation-delay: 280ms; } .reveal.d4 { animation-delay: 380ms; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+
+    /* ---------- Phone mock ---------- */
+    .phones { position: relative; height: 640px; }
+    .phone {
+      position: absolute; width: 300px; height: 620px; border-radius: 46px; padding: 12px;
+      background: oklch(0.11 0.004 135); border: 1px solid var(--line-strong);
+      box-shadow: 0 40px 80px -30px oklch(0 0 0 / 0.7);
+    }
+    .phone .screen { width: 100%; height: 100%; border-radius: 36px; background: var(--bg); overflow: hidden; padding: 44px 18px 0; position: relative; font-size: 12px; line-height: 1.4; }
+    .phone .screen::before { content: ''; position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 92px; height: 26px; border-radius: 20px; background: oklch(0.08 0.003 135); }
+    .phone-a { right: 0; top: 0; z-index: 2; }
+    .phone-b { right: 210px; top: 60px; transform: rotate(-4deg); opacity: 0.92; }
+    @media (max-width: 1080px) { .phone-b { display: none; } .phones { height: 640px; display: flex; justify-content: center; } .phone-a { position: relative; } }
+
+    /* Mock app UI */
+    .m-day { text-align: center; font: 650 16px var(--font); margin-bottom: 10px; }
+    .m-hero { display: grid; grid-template-columns: 128px 1fr; gap: 14px; align-items: center; }
+    .m-ring { position: relative; width: 128px; height: 128px; }
+    .m-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .m-ring .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+    .m-ring .c b { font: 650 34px/0.95 var(--num); }
+    .m-ring .c small { color: var(--muted); font-size: 10px; }
+    .m-ring .fill { stroke-dasharray: 440; stroke-dashoffset: 440; animation: ring 1400ms 500ms var(--ease) forwards; }
+    @keyframes ring { to { stroke-dashoffset: var(--off); } }
+    .m-stat span { display: block; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+    .m-stat b { font: 600 19px/1.1 var(--num); display: block; margin-bottom: 8px; }
+    .m-macros { display: grid; gap: 9px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .m-macro { display: grid; grid-template-columns: 1fr auto; gap: 4px; font-size: 11px; color: var(--muted); }
+    .m-macro b { color: var(--text); font: 600 13px var(--num); }
+    .m-bar { grid-column: 1 / -1; height: 4px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+    .m-bar i { display: block; height: 100%; border-radius: 4px; }
+    .m-label { font-size: 9px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--faint); font-weight: 650; margin: 14px 0 4px; display: flex; gap: 6px; align-items: center; }
+    .m-label::before { content: ''; width: 5px; height: 5px; background: var(--green); }
+    .m-item { display: flex; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); }
+    .m-item .t { font: 500 12px var(--num); color: var(--faint); width: 30px; }
+    .m-item .n { flex: 1; min-width: 0; }
+    .m-item .n b { display: block; font-weight: 550; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .m-item .n span { font-size: 10px; color: var(--muted); }
+    .m-item .k { font: 600 15px var(--num); }
+    .m-tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 58px; border-top: 1px solid var(--line); background: var(--bg); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; }
+    .m-tabs i { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--faint); }
+    .m-tabs i.on { border-color: var(--text); }
+    .m-tabs .add { width: 40px; height: 40px; border-radius: 999px; background: var(--blue); display: grid; place-items: center; color: white; font: 400 24px/1 var(--font); border: 0; }
+    .m-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+    .m-big { font: 650 34px/1 var(--num); }
+    .m-big small { font: 500 11px var(--font); color: var(--muted); margin-left: 4px; }
+    .m-calc { font: 500 11.5px/1.6 var(--num); color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 10px 0; }
+    .m-calc b { color: var(--text); }
+    .m-go { background: var(--green); color: var(--on-green); border-radius: 999px; text-align: center; font-weight: 600; padding: 9px; font-size: 12px; }
+    .m-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; text-align: center; font-size: 9px; color: var(--faint); font-weight: 600; }
+    .m-week i { display: block; height: 22px; border-radius: 6px; background: var(--green); margin-bottom: 3px; }
+    .m-week .off i { background: var(--surface-2); }
+
+    /* ---------- Sections ---------- */
+    section { padding: clamp(72px, 10vw, 144px) 0; }
+    h2 { font: 800 clamp(40px, 6vw, 80px)/0.92 var(--num); letter-spacing: -0.01em; text-transform: uppercase; margin: 0 0 24px; max-width: 14ch; }
+    .sub { font-size: clamp(17px, 1.4vw, 19px); color: var(--muted); max-width: 54ch; margin: 0; }
+    .sub strong { color: var(--text); font-weight: 600; }
+
+    /* Logging: numbered rail, not cards */
+    .log { border-top: 1px solid var(--line); }
+    .rail { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: clamp(40px, 6vw, 72px); border-top: 1px solid var(--line-strong); }
+    .rail > div { padding: 28px 28px 8px 0; position: relative; }
+    .rail > div + div { padding-left: 28px; border-left: 1px solid var(--line); }
+    .rail .n { font: 700 15px var(--num); color: var(--green); letter-spacing: 0.06em; }
+    .rail h3 { font: 700 30px/1.05 var(--num); margin: 10px 0 10px; text-transform: uppercase; }
+    .rail p { color: var(--muted); margin: 0; font-size: 16px; max-width: 34ch; }
+    .rail .figure { font: 800 clamp(56px, 6vw, 84px)/1 var(--num); margin-top: 28px; color: var(--text); }
+    .rail .figure small { font: 500 14px var(--font); color: var(--faint); display: block; margin-top: 6px; }
+    @media (max-width: 860px) { .rail { grid-template-columns: 1fr; } .rail > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); } }
+
+    /* Maths: the trend chart is the image */
+    .maths { background: var(--bg-raised); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .maths .head { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: end; }
+    @media (max-width: 860px) { .maths .head { grid-template-columns: 1fr; gap: 0; } }
+    .chart-box { margin-top: clamp(40px, 5vw, 64px); position: relative; }
+    .chart-box svg { width: 100%; height: auto; overflow: visible; }
+    .chart-box .grid { stroke: var(--line); }
+    .chart-box .ax { fill: var(--faint); font: 500 12px var(--font); }
+    .chart-box .dot { fill: var(--faint); opacity: 0.75; }
+    .chart-box .trend { fill: none; stroke: var(--green); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .chart-box .tag { fill: var(--text); font: 700 15px var(--num); }
+    .chart-legend { display: flex; gap: 24px; color: var(--muted); font-size: 14px; margin-top: 16px; flex-wrap: wrap; }
+    .chart-legend i { display: inline-block; vertical-align: middle; margin-right: 8px; }
+    .eqs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: clamp(48px, 6vw, 80px); border-top: 1px solid var(--line-strong); }
+    .eqs > div { padding: 28px 32px 0 0; }
+    .eqs > div + div { padding-left: 32px; border-left: 1px solid var(--line); }
+    @media (max-width: 860px) { .eqs { grid-template-columns: 1fr; } .eqs > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); margin-top: 28px; } }
+    .eqs h3 { font: 700 26px var(--num); text-transform: uppercase; margin: 0 0 12px; }
+    .eqs p { color: var(--muted); font-size: 16px; margin: 0 0 16px; max-width: 46ch; }
+    .eq { font: 600 clamp(20px, 2.2vw, 26px)/1.4 var(--num); padding: 18px 20px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; white-space: nowrap; }
+    .eq .g { color: var(--green); }
+    .eq-note { font-size: 14px; color: var(--faint); margin-top: 10px; }
+
+    /* Price: drenched green */
+    .price { background: var(--green); color: var(--on-green); }
+    .price h2 { max-width: none; font-size: clamp(120px, 24vw, 340px); line-height: 0.8; margin: 0; letter-spacing: -0.03em; }
+    .price .top { display: grid; grid-template-columns: auto 1fr; gap: clamp(24px, 5vw, 72px); align-items: end; }
+    .price .top p { font-size: clamp(19px, 1.8vw, 24px); line-height: 1.4; font-weight: 500; max-width: 30ch; margin: 0 0 12px; }
+    @media (max-width: 860px) { .price .top { grid-template-columns: 1fr; } }
+    table.vs { width: 100%; border-collapse: collapse; margin-top: clamp(48px, 6vw, 80px); font-size: 16px; }
+    table.vs th, table.vs td { text-align: left; padding: 16px 12px 16px 0; border-bottom: 1px solid oklch(0.17 0.03 131 / 0.25); vertical-align: top; }
+    table.vs thead th { font: 700 15px var(--num); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 2px solid var(--on-green); }
+    table.vs td:first-child { font-weight: 600; }
+    table.vs .fuel { font-weight: 700; }
+    table.vs .no { color: var(--on-green-muted); }
+    .vs-wrap { overflow-x: auto; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); }
+    @media (max-width: 720px) { table.vs { min-width: 620px; font-size: 15px; } }
+    .vs-note { font-size: 13px; color: var(--on-green-muted); margin-top: 16px; }
+
+    /* Privacy */
+    .privacy .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 6vw, 96px); align-items: start; }
+    @media (max-width: 860px) { .privacy .wrap { grid-template-columns: 1fr; } }
+    .ledger { border-top: 1px solid var(--line-strong); }
+    .ledger div { display: grid; grid-template-columns: 1fr auto; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); font-size: 16px; }
+    .ledger span { color: var(--muted); }
+    .ledger b { font-weight: 600; text-align: right; }
+    .ledger b.g { color: var(--green); }
+
+    /* Install */
+    .install { border-top: 1px solid var(--line); }
+    .steps { counter-reset: s; list-style: none; padding: 0; margin: clamp(40px, 5vw, 64px) 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--line-strong); }
+    .steps li { counter-increment: s; padding: 28px 28px 0 0; }
+    .steps li + li { padding-left: 28px; border-left: 1px solid var(--line); }
+    .steps li::before { content: counter(s, decimal-leading-zero); display: block; font: 800 64px/1 var(--num); color: var(--green); margin-bottom: 14px; }
+    .steps b { display: block; font-size: 19px; margin-bottom: 6px; }
+    .steps span { color: var(--muted); font-size: 16px; }
+    .steps svg { display: inline; width: 18px; height: 18px; vertical-align: -3px; }
+    @media (max-width: 860px) { .steps { grid-template-columns: 1fr; } .steps li + li { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); margin-top: 24px; } }
+    .final { margin-top: clamp(48px, 6vw, 80px); display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .final .url { font: 600 18px var(--num); color: var(--muted); }
+
+    footer { border-top: 1px solid var(--line); padding: 40px 0 56px; color: var(--faint); font-size: 14px; }
+    footer .wrap { display: flex; gap: 24px; justify-content: space-between; flex-wrap: wrap; }
+    footer p { margin: 0; max-width: 70ch; }
+
+    @media (max-width: 1080px) { .hero .wrap { grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal { animation: none; opacity: 1; transform: none; }
+      .m-ring .fill { animation: none; stroke-dashoffset: var(--off); }
+      .chart-box .trend { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="../icons/icon-192.png" alt="">Fuel</a>
+    <div class="links">
+      <a href="#how">How it works</a>
+      <a href="#price">Price</a>
+      <a href="#install">Install</a>
+      <a class="btn btn-primary btn-sm" href="../">Open Fuel</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <h1 class="reveal">Know your <span class="g">real</span> burn.</h1>
+      <p class="lede reveal d1">Fuel tracks calories and protein in under a minute a day, then works out <strong>what your body actually burns</strong> from your own weigh-ins. Your target adjusts to you, not to a formula.</p>
+      <div class="ctas reveal d2">
+        <a class="btn btn-primary" href="../">Open Fuel</a>
+        <a class="btn" href="#install">Add it to your iPhone</a>
+      </div>
+      <div class="facts reveal d3">
+        <div><b>£0</b>No subscription, ever</div>
+        <div><b>2,854</b>UK foods built in</div>
+        <div><b>0</b>Ads or accounts</div>
+      </div>
+    </div>
+
+    <div class="phones reveal d4" aria-label="Fuel on iPhone: today's calories and the weekly check-in">
+      <!-- Weekly check-in screen -->
+      <div class="phone phone-b" aria-hidden="true"><div class="screen">
+        <div class="m-day" style="text-align:left;font-size:18px">Progress</div>
+        <div class="m-panel">
+          <div class="m-label" style="margin-top:0">Your expenditure</div>
+          <div class="m-big">2,700<small>kcal a day</small></div>
+          <div class="m-calc">Ate <b>2,487</b> kcal/day on 22 days<br>Trend fell <b>0.2 kg</b> a week<br>2,487 + 7,700 × 0.2 ÷ 7 = <b>2,700</b></div>
+          <div style="color:var(--muted);font-size:11px;margin-bottom:10px">To lose 0.4 kg a week, your new target is <b style="color:var(--text)">2,260 kcal</b>.</div>
+          <div class="m-go">Update my target to 2,260</div>
+        </div>
+        <div class="m-label">Streak</div>
+        <div style="display:flex;align-items:baseline;gap:6px"><b class="num" style="font-size:28px">3</b><span style="color:var(--muted);font-size:11px">weeks in a row</span></div>
+        <div class="m-week"><div><i></i>M</div><div><i></i>T</div><div><i></i>W</div><div><i></i>T</div><div><i></i>F</div><div><i></i>S</div><div class="off"><i></i>S</div></div>
+      </div></div>
+
+      <!-- Today screen -->
+      <div class="phone phone-a"><div class="screen">
+        <div class="m-day">Today</div>
+        <div class="m-hero">
+          <div class="m-ring">
+            <svg viewBox="0 0 160 160"><circle cx="80" cy="80" r="70" fill="none" stroke="oklch(0.255 0.009 135)" stroke-width="11"/>
+              <circle class="fill" cx="80" cy="80" r="70" fill="none" stroke="oklch(0.76 0.19 131)" stroke-width="11" stroke-linecap="round" style="--off:235"/></svg>
+            <div class="c"><b>1,234</b><small>kcal left</small></div>
+          </div>
+          <div>
+            <div class="m-stat"><span>Eaten</span><b>1,076</b></div>
+            <div class="m-stat"><span>Target</span><b>2,310</b></div>
+            <div class="m-stat"><span>Protein left</span><b style="color:var(--green)">91g</b></div>
+          </div>
+        </div>
+        <div class="m-macros">
+          <div class="m-macro"><span>Protein</span><span><b>109</b> / 200 g</span><div class="m-bar"><i style="width:55%;background:var(--green)"></i></div></div>
+          <div class="m-macro"><span>Carbs</span><span><b>106</b> / 220 g</span><div class="m-bar"><i style="width:48%;background:var(--blue-text)"></i></div></div>
+          <div class="m-macro"><span>Fat</span><span><b>22</b> / 70 g</span><div class="m-bar"><i style="width:31%;background:var(--sand)"></i></div></div>
+        </div>
+        <div class="m-label">Food</div>
+        <div class="m-item"><span class="t">08:10</span><span class="n"><b>Skyr 0% Fat Natural</b><span>Danone · 150 g</span></span><span class="k">77</span></div>
+        <div class="m-item"><span class="t">08:12</span><span class="n"><b>Impact Whey Protein</b><span>Myprotein · 30 g</span></span><span class="k">114</span></div>
+        <div class="m-item"><span class="t">12:30</span><span class="n"><b>Chicken n rice</b><span>1 serving · 47g protein</span></span><span class="k">403</span></div>
+        <div class="m-item"><span class="t">15:45</span><span class="n"><b>Salmon bagel</b><span>1 serving</span></span><span class="k">290</span></div>
+        <div class="m-tabs"><i class="on"></i><i></i><span class="add">+</span><i></i><i></i></div>
+      </div></div>
+    </div>
+  </div>
+</header>
+
+<section class="log" id="how">
+  <div class="wrap">
+    <h2>Logged before the kettle boils.</h2>
+    <p class="sub">Most people quit tracking because it's a chore. Fuel puts the foods you actually eat one tap away, and never turns red or tells you off when you go over.</p>
+    <div class="rail">
+      <div>
+        <span class="n">01 · SEARCH</span>
+        <h3>UK foods, offline</h3>
+        <p>The UK government's official food tables are built in, so chicken breast and basmati rice work with no signal, in grams.</p>
+        <div class="figure num">2,854<small>foods, per 100 g</small></div>
+      </div>
+      <div>
+        <span class="n">02 · SCAN</span>
+        <h3>Barcodes, free</h3>
+        <p>Point the camera at a packet and Fuel pulls the label from Open Food Facts. MyFitnessPal and Lose It! now charge for this in the UK.</p>
+        <div class="figure num">£0<small>barcode scanning</small></div>
+      </div>
+      <div>
+        <span class="n">03 · REPEAT</span>
+        <h3>Your usuals, one tap</h3>
+        <p>Favourites, recents, recipes and your own foods sit at the top. Copy yesterday in one tap when the days look the same.</p>
+        <div class="figure num">1<small>tap to re-log</small></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="maths">
+  <div class="wrap">
+    <div class="head">
+      <h2>The scale lies. The trend doesn't.</h2>
+      <p class="sub">Daily weight jumps around by a kilo with water, salt and food in your gut. Fuel smooths every weigh-in into a trend line, so one bad morning never throws you off, and uses that trend to <strong>measure your real daily burn</strong>.</p>
+    </div>
+    <div class="chart-box" id="chart" role="img" aria-label="Sixty days of daily weigh-ins scattered around a smooth trend line falling from about 81 to 78.5 kilograms"></div>
+    <div class="chart-legend">
+      <span><i style="width:8px;height:8px;border-radius:50%;background:var(--faint)"></i>Daily scale weight</span>
+      <span><i style="width:22px;border-top:3px solid var(--green)"></i>Fuel's trend weight</span>
+    </div>
+    <div class="eqs">
+      <div>
+        <h3>Trend weight</h3>
+        <p>Each weigh-in nudges the trend 10% of the way towards it. Noise cancels out; real change shows through.</p>
+        <div class="eq">T<sub>n</sub> = T<sub>n−1</sub> + <span class="g">0.1</span> × (W<sub>n</sub> − T<sub>n−1</sub>)</div>
+        <div class="eq-note">T = trend weight (kg), W = today's scale weight (kg). From The Hacker's Diet.</div>
+      </div>
+      <div>
+        <h3>Your real burn</h3>
+        <p>Every week Fuel compares what you ate with how your trend moved, then sets your target from the answer.</p>
+        <div class="eq">Burn = <span class="g">intake</span> − 7,700 × Δtrend ÷ days</div>
+        <div class="eq-note">7,700 kcal ≈ 1 kg of body fat. Example: 2,487 + 7,700 × 0.2 ÷ 7 = 2,700 kcal a day.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="price" id="price">
+  <div class="wrap">
+    <div class="top">
+      <h2 class="num">£0</h2>
+      <p>No trial, no paywall, no ads, no account. The features other apps put behind a subscription are just there.</p>
+    </div>
+    <div class="vs-wrap">
+      <table class="vs">
+        <thead><tr><th></th><th>Fuel</th><th>MyFitnessPal</th><th>Lose It!</th><th>MacroFactor</th></tr></thead>
+        <tbody>
+          <tr><td>Price (UK)</td><td class="fuel">Free</td><td>Free, Premium ~£64.99/yr</td><td>Free, Premium ~£30–35/yr</td><td>~$72/yr, no free tier</td></tr>
+          <tr><td>Barcode scanning</td><td class="fuel">Free</td><td class="no">Premium</td><td class="no">Premium</td><td>Included</td></tr>
+          <tr><td>Target adapts to your real burn</td><td class="fuel">Yes</td><td class="no">No</td><td class="no">No</td><td>Yes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="vs-note">Competitor details from UK App Store listings and the apps' own sites, November 2026. Prices change; check before you buy anything.</p>
+  </div>
+</section>
+
+<section class="privacy">
+  <div class="wrap">
+    <div>
+      <h2>Your data stays on your phone.</h2>
+      <p class="sub">There's no server and no account, so there's nothing to leak or sell. Export a backup to iCloud Drive whenever you like.</p>
+    </div>
+    <div class="ledger" aria-label="What leaves your phone">
+      <div><span>Food log, weight, settings</span><b class="g">Never leaves your phone</b></div>
+      <div><span>Barcode you scan</span><b>Sent to Open Food Facts to look it up</b></div>
+      <div><span>Your name, email, location</span><b class="g">Never asked for</b></div>
+      <div><span>Tracking or analytics</span><b class="g">None</b></div>
+      <div><span>Works offline</span><b class="g">Yes, after first open</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="install" id="install">
+  <div class="wrap">
+    <h2>On your home screen in 30 seconds.</h2>
+    <p class="sub">Fuel is a web app, so there's no App Store and nothing to pay. Once added, it opens full screen like any other app.</p>
+    <ol class="steps">
+      <li><b>Open in Safari</b><span>Go to printharry.github.io/fuel on your iPhone. It has to be Safari.</span></li>
+      <li><b>Tap Share</b><span>The square with the arrow <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>, then Add to Home Screen.</span></li>
+      <li><b>Open from the icon</b><span>Set your goal once. After about ten logged days, Fuel starts measuring your real burn.</span></li>
+    </ol>
+    <div class="final">
+      <a class="btn btn-primary" href="../">Open Fuel</a>
+      <span class="url">printharry.github.io/fuel</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Built by Harry. Generic foods: McCance and Widdowson's CoFID 2021, Open Government Licence v3.0. Branded products: Open Food Facts, Open Database Licence. Trend weight method: The Hacker's Diet, John Walker.</p>
+    <p>Fuel isn't medical advice.</p>
+  </div>
+</footer>
+
+<script>
+// Trend chart: 60 days of illustrative weigh-ins, smoothed the same way the app does it.
+(function () {
+  const host = document.getElementById('chart');
+  const N = 60;
+  let seed = 7;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const days = [];
+  let trend = null;
+  for (let i = 0; i < N; i++) {
+    if (i % 7 === 5 || i % 11 === 3) { days.push({ w: null, t: trend }); continue; } // missed weigh-ins
+    const real = 81.0 - i * 0.042;
+    const w = real + (rand() - 0.5) * 1.6 + (i % 7 === 0 ? 0.5 : 0); // Monday water bump
+    trend = trend == null ? w : trend + 0.1 * (w - trend);
+    days.push({ w, t: trend });
+  }
+  const W = 1200, H = 380, pad = { l: 48, r: 24, t: 20, b: 36 };
+  const lo = 77.5, hi = 82.5;
+  const x = i => pad.l + (i * (W - pad.l - pad.r)) / (N - 1);
+  const y = v => pad.t + (1 - (v - lo) / (hi - lo)) * (H - pad.t - pad.b);
+  let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  for (let v = 78; v <= 82; v++) s += `<line class="grid" x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${pad.l - 10}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  [0, 14, 28, 42, 59].forEach(i => { s += `<text class="ax" x="${x(i)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === 59 ? 'end' : 'middle'}">${i === 59 ? 'Today' : 'Day ' + (i + 1)}</text>`; });
+  days.forEach((d, i) => { if (d.w != null) s += `<circle class="dot" cx="${x(i)}" cy="${y(d.w)}" r="4.5"/>`; });
+  const pts = days.map((d, i) => (d.t == null ? null : `${x(i).toFixed(1)},${y(d.t).toFixed(1)}`)).filter(Boolean);
+  s += `<polyline class="trend" points="${pts.join(' ')}"/>`;
+  const last = days[N - 1].t;
+  s += `<circle cx="${x(N - 1)}" cy="${y(last)}" r="7" fill="oklch(0.76 0.19 131)" stroke="oklch(0.19 0.007 135)" stroke-width="3"/>`;
+  s += `<text class="tag" x="${x(N - 1) - 14}" y="${y(last) - 16}" text-anchor="end">${last.toFixed(1)} kg trend</text>`;
+  s += '</svg>';
+  host.innerHTML = s;
+
+  // Draw the trend line when the chart scrolls into view.
+  const line = host.querySelector('.trend');
+  const len = line.getTotalLength();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
+  line.style.strokeDasharray = len;
+  line.style.strokeDashoffset = len;
+  new IntersectionObserver((entries, obs) => {
+    if (!entries[0].isIntersecting) return;
+    line.style.transition = 'stroke-dashoffset 1800ms cubic-bezier(0.22, 1, 0.36, 1)';
+    line.style.strokeDashoffset = 0;
+    obs.disconnect();
+  }, { threshold: 0.35 }).observe(host);
+})();
+</script>
+</body>
+</html>
