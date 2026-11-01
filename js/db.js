@@ -63,10 +63,15 @@ export const db = {
   },
   async importAll(data) {
     if (!data || data.app !== 'fuel') throw new Error('This file is not a Fuel backup.');
+    // Clean every row first, so a tampered file can't smuggle code into the page.
+    const clean = {};
     for (const name of Object.keys(STORES)) {
       if (!Array.isArray(data[name])) continue;
+      clean[name] = data[name].map(row => sanitise(row)).filter(row => row && row[STORES[name].keyPath] != null && (name !== 'weights' || row.kg > 0));
+    }
+    for (const [name, rows] of Object.entries(clean)) {
       await this.clear(name);
-      for (const row of data[name]) await this.put(name, row);
+      for (const row of rows) await this.put(name, row);
     }
   },
 };
@@ -80,6 +85,31 @@ export async function requestPersistence() {
     }
   } catch (e) { /* not supported */ }
   return false;
+}
+
+// Backup files are untrusted: numbers must be numbers, ids/dates/times must match their format,
+// and anything else is kept only as plain text (which the UI always escapes).
+const NUM_KEYS = new Set(['kcal', 'protein', 'carbs', 'fat', 'fibre', 'amount', 'servingG', 'servings', 'kg', 'age', 'heightCm',
+  'weightKg', 'activity', 'ratePct', 'proteinPerKg', 'streakTarget', 'kcalTarget', 'tdee', 'initialTdee', 'created', 'target',
+  'avgIntake', 'slopeKgPerWeek']);
+const FORMATS = { id: /^[\w-]{1,64}$/, date: /^\d{4}-\d{2}-\d{2}$/, time: /^(\d{2}:\d{2})?$/ };
+function sanitise(value, key = '') {
+  if (value === null || value === undefined) return value ?? null;
+  if (Array.isArray(value)) return value.map(v => sanitise(v)).filter(v => v !== undefined);
+  if (typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+      const s = sanitise(v, k);
+      if (s === undefined) { if (k === 'id' || k === 'date') return undefined; continue; }
+      out[k] = s;
+    }
+    return out;
+  }
+  if (NUM_KEYS.has(key)) { const n = Number(value); return Number.isFinite(n) ? n : null; }
+  if (FORMATS[key]) return FORMATS[key].test(String(value)) ? String(value) : undefined;
+  if (typeof value === 'boolean' || typeof value === 'number') return value;
+  return String(value).slice(0, 500);
 }
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);

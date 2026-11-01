@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- Only load code from this site and the pinned barcode library; only talk to Open Food Facts. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; connect-src 'self' https://world.openfoodfacts.org https://search.openfoodfacts.org https://cdn.jsdelivr.net https://fastly.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
   <title>Fuel</title>
   <meta name="description" content="Calorie, protein and weight-trend tracker. Free, offline, no ads.">
   <meta name="theme-color" content="#0d0f0b">
