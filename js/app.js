@@ -53,10 +53,20 @@ function currentWeightKg(series) {
   return series.length ? series[series.length - 1].trend : S.settings.weightKg;
 }
 
+// How targets are set: 'auto' (from expenditure), 'kcal' (calories by hand, macros worked out)
+// or 'macros' (all three macros by hand, calories = 4P + 4C + 9F).
+const targetMode = s => s.targetMode || (s.manualKcal ? 'kcal' : 'auto');
+
 // Recalculate calorie and macro targets from the current expenditure estimate.
 function applyTargets(s, weightKg) {
   const w = weightKg || s.weightKg;
-  if (!s.manualKcal) s.kcalTarget = C.calorieTarget(s.tdee, s.ratePct, w, s.sex);
+  const mode = targetMode(s);
+  s.manualKcal = mode !== 'auto'; // hand-set targets are never changed by the weekly check-in
+  if (mode === 'macros') {
+    s.kcalTarget = Math.round(s.protein * 4 + s.carbs * 4 + s.fat * 9);
+    return s;
+  }
+  if (mode === 'auto') s.kcalTarget = C.calorieTarget(s.tdee, s.ratePct, w, s.sex);
   Object.assign(s, C.macroTargets(s.kcalTarget, w, s.proteinPerKg));
   return s;
 }
@@ -596,7 +606,7 @@ async function viewProgress() {
         ${fmt(est.avgIntake)} ${est.slopeKgPerWeek <= 0 ? '+' : '−'} 7,700 × ${fmt1(Math.abs(est.slopeKgPerWeek))} ÷ 7 = <b>${fmt(est.observed)}</b><br>
         <span class="faint">${est.confidence >= 1 ? 'Based fully on your own data' : `${Math.round(est.confidence * 100)}% your data, the rest from the starting estimate`}</span>
       </div>
-      ${s.manualKcal ? `<p class="small muted">You've set your target by hand, so Fuel won't suggest changes. Turn that off in Settings.</p>`
+      ${s.manualKcal ? `<p class="small muted">You're setting your ${targetMode(s) === 'macros' ? 'macros' : 'calories'} by hand, so Fuel won't change them. At this burn, ${s.ratePct ? `${s.ratePct < 0 ? 'losing' : 'gaining'} ${fmt1(Math.abs(rate))} kg a week` : 'holding your weight'} needs about <strong>${fmt(suggested)} kcal</strong>. Switch to Automatic in Settings to have Fuel manage it.</p>`
       : canCheck ? `<p class="prose">To ${s.ratePct < 0 ? 'lose' : s.ratePct > 0 ? 'gain' : 'hold'}${s.ratePct ? ` ${fmt1(Math.abs(rate))} kg a week` : ''}, your new target is <strong>${fmt(suggested)} kcal</strong> (now ${fmt(s.kcalTarget)}).</p>
           <button class="btn btn-go btn-block" data-act="apply-checkin">Update my target to ${fmt(suggested)}</button>`
       : `<p class="small muted">${lastCheck ? `Last check-in ${dayLabel(lastCheck.date, t).toLowerCase()}.` : ''} ${changed ? `Next check-in in ${Math.max(1, 6 - daysSince)} day${6 - daysSince === 1 ? '' : 's'}.` : 'Your target already matches. Keep going.'}</p>`}
@@ -649,6 +659,7 @@ async function viewSettings() {
   const s = S.settings;
   const standalone = isStandalone();
   const persisted = navigator.storage?.persisted ? await navigator.storage.persisted().catch(() => false) : false;
+  const mode = S.settingsMode || targetMode(s); // unsaved choice survives re-renders until Save
   $app.innerHTML = `<main class="view">
     <header class="topbar"><h1>Settings</h1></header>
     ${!standalone ? `<div class="nudge" style="margin-top:0">${icon.share}<div class="main"><b>Install Fuel on your phone</b><span>${isIos() ? 'In Safari tap Share, then Add to Home Screen.' : 'Open the browser menu and choose Install app.'} Installed, it works offline and your data is protected from clean-ups.</span></div></div>` : ''}
@@ -656,13 +667,24 @@ async function viewSettings() {
     <div class="label">Targets</div>
     <div class="preview" style="margin-top:0">${previewHtml({ kcal: s.kcalTarget, protein: s.protein, carbs: s.carbs, fat: s.fat })}</div>
     <label class="field" style="margin-top:14px"><span>Goal</span><select class="input" id="s-goal">${C.GOALS.map(g => `<option value="${g.id}" ${s.ratePct === g.id ? 'selected' : ''}>${g.label}${g.id ? ` (${Math.abs(g.id)}% a week)` : ''}</option>`).join('')}</select></label>
+    <label class="field"><span>Set targets</span>
+      <div class="seg">${[['auto', 'Automatic'], ['kcal', 'Calories'], ['macros', 'Macros']].map(([v, l]) => `<button data-act="s-mode" data-v="${v}" aria-pressed="${mode === v}">${l}</button>`).join('')}</div></label>
+    <p class="small faint" style="margin:-6px 0 14px">${{
+      auto: 'Fuel sets calories from your goal and adjusts them at each weekly check-in.',
+      kcal: 'You set the calories. Protein comes from your weight; fat is 25% and carbs fill the rest.',
+      macros: 'You set protein, carbs and fat. Calories are worked out from them (4 / 4 / 9 kcal per gram).',
+    }[mode]}</p>
+    ${mode === 'kcal' ? `<label class="field"><span>Calories</span><div class="input-unit"><input class="input num" id="s-kcal" inputmode="numeric" value="${s.kcalTarget}"><em>kcal</em></div></label>` : ''}
+    ${mode === 'macros' ? `<div class="grid-3">
+      <label class="field"><span>Protein</span><div class="input-unit"><input class="input num" id="s-mp" inputmode="numeric" value="${s.protein}"><em>g</em></div></label>
+      <label class="field"><span>Carbs</span><div class="input-unit"><input class="input num" id="s-mc" inputmode="numeric" value="${s.carbs}"><em>g</em></div></label>
+      <label class="field"><span>Fat</span><div class="input-unit"><input class="input num" id="s-mf" inputmode="numeric" value="${s.fat}"><em>g</em></div></label>
+    </div>
+    <p class="small muted" id="s-mtotal" style="margin:-4px 0 14px"></p>` : ''}
     <div class="grid-2">
-      <label class="field"><span>Protein per kg</span><div class="input-unit"><input class="input num" id="s-ppk" inputmode="decimal" value="${s.proteinPerKg}"><em>g</em></div></label>
+      ${mode === 'macros' ? '' : `<label class="field"><span>Protein per kg</span><div class="input-unit"><input class="input num" id="s-ppk" inputmode="decimal" value="${s.proteinPerKg}"><em>g</em></div></label>`}
       <label class="field"><span>Streak: days a week</span><select class="input" id="s-streak">${[3, 4, 5, 6, 7].map(n => `<option ${s.streakTarget === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     </div>
-    <label class="field"><span>Calorie target</span>
-      <div class="seg">${[[false, 'Automatic'], [true, 'Set by hand']].map(([v, l]) => `<button data-act="s-manual" data-v="${v}" aria-pressed="${!!s.manualKcal === v}">${l}</button>`).join('')}</div></label>
-    ${s.manualKcal ? `<label class="field"><span>Your target</span><div class="input-unit"><input class="input num" id="s-kcal" inputmode="numeric" value="${s.kcalTarget}"><em>kcal</em></div></label>` : ''}
 
     <div class="label">You</div>
     <div class="grid-2">
@@ -683,6 +705,16 @@ async function viewSettings() {
     <p class="prose small">Generic foods: McCance and Widdowson's Composition of Foods Integrated Dataset (CoFID) 2021, Public Health England, Open Government Licence v3.0. Branded products: Open Food Facts, Open Database Licence. Trend weight from The Hacker's Diet (John Walker).</p>
     <button class="btn btn-danger btn-sm" data-act="reset" style="margin-top:8px">Delete all data</button>
   </main>${tabbar('settings')}`;
+  const total = document.getElementById('s-mtotal');
+  if (total) {
+    const upd = () => {
+      const g = id => Math.max(0, parseFloat(document.getElementById(id).value) || 0);
+      const kcal = g('s-mp') * 4 + g('s-mc') * 4 + g('s-mf') * 9;
+      total.innerHTML = `= <b class="num" style="color:var(--text);font-size:17px">${fmt(kcal)}</b> kcal a day`;
+    };
+    ['s-mp', 's-mc', 's-mf'].forEach(id => document.getElementById(id).addEventListener('input', upd));
+    upd();
+  }
   document.getElementById('import').addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
@@ -715,6 +747,7 @@ const actions = {
   tab: v => {
     if (v === 'add') { S.addTab = 'search'; S.query = ''; S.online = null; S.recipe = null; }
     if (v === 'today' && S.view === 'today') S.date = today();
+    S.settingsMode = null;
     go(v, { root: v !== 'add' });
   },
   day: v => { const d = C.addDays(S.date, +v); if (d <= today()) { S.date = d; render(); } },
@@ -853,7 +886,7 @@ const actions = {
     render();
   },
 
-  's-manual': v => { S.settings.manualKcal = v === 'true'; render(); },
+  's-mode': v => { S.settingsMode = v; render(); },
   's-unit': v => { S.settings.unit = v; render(); },
   'save-settings': async () => {
     const s = S.settings, val = id => document.getElementById(id)?.value;
@@ -867,7 +900,21 @@ const actions = {
     const oldInitial = s.initialTdee;
     s.initialTdee = Math.round(C.initialTdee({ ...s, weightKg: w }));
     if (!(await db.all('checkins')).length || s.tdee === oldInitial) s.tdee = s.initialTdee; // no data-driven estimate yet
-    if (s.manualKcal) { const k = +val('s-kcal'); if (k >= 1000 && k <= 6000) s.kcalTarget = k; }
+    const mode = S.settingsMode || targetMode(s);
+    if (mode === 'kcal') {
+      const k = +val('s-kcal');
+      if (!(k >= 1000 && k <= 6000)) return toast('Calories must be between 1,000 and 6,000.');
+      s.kcalTarget = k;
+    }
+    if (mode === 'macros') {
+      const p = Math.round(+val('s-mp')), c = Math.round(+val('s-mc')), f = Math.round(+val('s-mf'));
+      if (!(p >= 30 && p <= 400)) return toast('Protein must be between 30 and 400 g.');
+      if (!(c >= 0 && c <= 900)) return toast('Carbs must be between 0 and 900 g.');
+      if (!(f >= 20 && f <= 300)) return toast('Fat must be at least 20 g (and at most 300 g).');
+      Object.assign(s, { protein: p, carbs: c, fat: f });
+    }
+    s.targetMode = mode;
+    S.settingsMode = null;
     applyTargets(s, w);
     await saveSettings();
     toast('Saved');
